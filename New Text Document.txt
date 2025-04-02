@@ -1,0 +1,47 @@
+from fastapi import FastAPI
+from pydantic import BaseModel
+import torch
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
+
+app = FastAPI()
+
+# Define request body structure
+class InputText(BaseModel):
+    text: str
+
+# Use a smaller model
+MODEL_NAME = "distilbert-base-uncased-finetuned-sst-2-english"
+tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+model = AutoModelForSequenceClassification.from_pretrained(MODEL_NAME, use_safetensors=True)
+
+def classify_sentiment(logits):
+    """Convert model output to sentiment labels based on probability threshold."""
+    probs = torch.nn.functional.softmax(logits, dim=1)[0]
+    negative_score = probs[0].item()
+    
+    # Classify as negative if the negative score is greater than 0.5
+    print(f"Negative score: {negative_score}")
+    sentiment = "negative" if negative_score > 0.001 else "positive"
+
+    # Check for extreme negativity
+    alert = "Extreme negative message detected!" if negative_score > 0.95 else "no_alert"
+
+    return sentiment, alert
+
+@app.post("/analyze/")
+async def analyze_text(input_data: InputText):
+    inputs = tokenizer(input_data.text, return_tensors="pt", truncation=True, padding=True)
+
+    with torch.no_grad():
+        outputs = model(**inputs)
+        logits = outputs.logits
+
+    sentiment, alert = classify_sentiment(logits)
+
+    response = {
+        "text": input_data.text,
+        "sentiment": sentiment,
+        "alert": alert
+    }
+
+    return response
