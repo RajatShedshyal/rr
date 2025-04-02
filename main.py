@@ -9,7 +9,7 @@ app = FastAPI()
 class InputText(BaseModel):
     text: str
 
-# Load a better sentiment model (3-class: positive, neutral, negative)
+# Load a better sentiment model (3-class: positive, neutral, negative) jadklf
 MODEL_NAME = "cardiffnlp/twitter-roberta-base-sentiment-latest"
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 model = AutoModelForSequenceClassification.from_pretrained(MODEL_NAME, use_safetensors=True)
